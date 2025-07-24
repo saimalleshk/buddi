@@ -206,24 +206,7 @@
             </div>
         </div>
     </div>
-
     <script>
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let cookie of cookies) {
-                    cookie = cookie.trim();
-                    if (cookie.startsWith(name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
-        }
-        const csrftoken = getCookie('csrftoken');
-
         document.getElementById("test-form").addEventListener("submit", function (e) {
             e.preventDefault();
 
@@ -232,6 +215,7 @@
             const resultsContainer = document.getElementById('results-container');
             const resultsDiv = document.getElementById('results');
 
+            // Disable the button and show the spinner while waiting for the response
             runBtn.disabled = true;
             spinner.style.display = 'inline-block';
             resultsContainer.style.display = 'none';
@@ -240,6 +224,7 @@
             const form = e.target;
             const formData = new FormData(form);
 
+            // Make the API call
             fetch("/run-openai-test/", {
                 method: "POST",
                 headers: {
@@ -249,33 +234,51 @@
             })
                 .then(response => response.json())
                 .then(data => {
+                    // Re-enable the button and hide the spinner
                     runBtn.disabled = false;
                     spinner.style.display = 'none';
                     resultsContainer.style.display = 'block';
 
+                    // Success or failure status line
                     const statusLine = data.success
                         ? `<span class="success-line">✅ Success</span>`
                         : `<span class="error-line">❌ Failed</span>`;
 
+                    // Error details section (only show if not successful)
+                    let errorDetails = '';
+                    if (!data.success) {
+                        errorDetails = `
+                        <strong>Error Code:</strong> ${data.error_code || 'N/A'}<br>
+                        <strong>Error Message:</strong> ${data.error_message || 'N/A'}<br>
+                        <strong>Trace ID:</strong> ${data.trace_id || 'N/A'}<br>
+                        <strong>Internal Request ID:</strong> ${data.internal_request_id || 'N/A'}<br>
+                        <strong>Retry After:</strong> ${data.retry_after || 'N/A'}<br>
+                    `;
+                    }
+
+                    // Final output rendering
                     resultsDiv.innerHTML = `
-        > Sending request to Azure OpenAI...<br>
-        ${statusLine}<br>
-        HTTP ${data.http_status || '---'} | ⏱ ${data.latency_ms || '--'} ms<br>
-        ----------------------------------------<br>
-        ${data.output}
-      `;
+                    > Sending request to Azure OpenAI...<br>
+                    ${statusLine}<br>
+                    HTTP ${data.http_status || '---'} | ⏱ ${data.latency_ms || '--'} ms<br>
+                    ----------------------------------------<br>
+                    ${data.output}<br><br>
+                    ${errorDetails}
+                `;
                 })
                 .catch(err => {
+                    // If there's an unexpected error in the fetch process
                     runBtn.disabled = false;
                     spinner.style.display = 'none';
                     resultsContainer.style.display = 'block';
                     resultsDiv.innerHTML = `
-        <span class="error-line">❌ Unexpected error occurred.</span><br>
-        ${err}
-      `;
+                    <span class="error-line">❌ Unexpected error occurred.</span><br>
+                    ${err}
+                `;
                 });
         });
     </script>
+
 
 </body>
 
